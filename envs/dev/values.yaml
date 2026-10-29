@@ -1,15 +1,15 @@
-# Dev environment (namespace homefinance-dev). Image tags are bumped by PR; Phase 3 automates this.
-# PLACEHOLDER tags below: replace with the sha-xxxxxxx published for the app repo's develop branch
-# (must include the Nginx /api proxy and Actuator health endpoints, i.e. app PR #5 or later).
+﻿# Dev environment (namespace homefinance-dev). Image tags are bumped by PR; Phase 3 automates this.
+# Image tags come from the app repo's publish workflow (sha-xxxxxxx = short commit of homefinance-app).
+# Bumped by PR; Phase 3 automates this.
 backend:
   image:
-    tag: sha-0000000
+    tag: sha-eca997e
   replicas: 1
   springProfile: dev
 
 frontend:
   image:
-    tag: sha-0000000
+    tag: sha-eca997e
   replicas: 1
 
 ingress:

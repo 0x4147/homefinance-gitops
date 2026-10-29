@@ -1,8 +1,8 @@
-# Prod-like environment (namespace homefinance-prod): more replicas and a PodDisruptionBudget.
-# PLACEHOLDER tags below: replace with the sha-xxxxxxx promoted from dev (see envs/dev/values.yaml).
+﻿# Prod-like environment (namespace homefinance-prod): more replicas and a PodDisruptionBudget.
+# Promote by copying the tag that has been verified in dev.
 backend:
   image:
-    tag: sha-0000000
+    tag: sha-eca997e
   replicas: 2
   springProfile: prod
   pdb:
@@ -10,7 +10,7 @@ backend:
 
 frontend:
   image:
-    tag: sha-0000000
+    tag: sha-eca997e
   replicas: 2
 
 ingress:
