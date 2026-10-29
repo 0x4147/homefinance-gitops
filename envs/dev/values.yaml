@@ -1,0 +1,16 @@
+# Dev environment (namespace homefinance-dev). Image tags are bumped by PR; Phase 3 automates this.
+# PLACEHOLDER tags below: replace with the sha-xxxxxxx published for the app repo's develop branch
+# (must include the Nginx /api proxy and Actuator health endpoints, i.e. app PR #5 or later).
+backend:
+  image:
+    tag: sha-0000000
+  replicas: 1
+  springProfile: dev
+
+frontend:
+  image:
+    tag: sha-0000000
+  replicas: 1
+
+ingress:
+  host: dev.homefinance.local

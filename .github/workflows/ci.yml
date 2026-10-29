@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint and render both environments
+        run: |
+          for env in dev prod; do
+            helm lint charts/homefinance -f envs/$env/values.yaml
+            helm template homefinance charts/homefinance -n homefinance-$env -f envs/$env/values.yaml > /dev/null
+          done

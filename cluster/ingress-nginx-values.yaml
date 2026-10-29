@@ -1,0 +1,10 @@
+# Values for the community ingress-nginx chart on the local minikube cluster.
+controller:
+  replicaCount: 1
+  # LoadBalancer is satisfied by `minikube tunnel`, which maps it to 127.0.0.1 on the host
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi

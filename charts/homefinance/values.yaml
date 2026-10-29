@@ -1,0 +1,68 @@
+# Defaults for every environment. Per-environment overrides live in envs/<env>/values.yaml.
+#
+# Service names are fixed (backend, frontend, mysql): the frontend image proxies /api to the host
+# "backend", so the Service must have exactly that name. Each environment has its own namespace.
+
+image:
+  registry: ghcr.io/0x4147
+  pullPolicy: IfNotPresent
+
+# Secret holding the DB credentials. The chart never creates it (this repo is public); see
+# cluster/bootstrap-secrets.ps1. Required keys: mysql-root-password, mysql-user, mysql-password.
+existingSecret: homefinance-db
+
+backend:
+  image:
+    repository: homefinance-backend
+    tag: ""            # required, set per environment (sha-xxxxxxx from the app repo's publish workflow)
+  replicas: 1
+  port: 8585
+  springProfile: dev
+  # Container-aware heap sizing; the limit below is what the JVM sees
+  javaToolOptions: "-XX:MaxRAMPercentage=70"
+  # UID/GID of the "app" user baked into the image (numeric so runAsNonRoot can be verified)
+  runAsUser: 100
+  runAsGroup: 101
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 768Mi
+  pdb:
+    enabled: false     # PodDisruptionBudget (useful once replicas > 1)
+
+frontend:
+  image:
+    repository: homefinance-frontend
+    tag: ""            # required
+  replicas: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+mysql:
+  image:
+    repository: mysql
+    tag: "8.0"
+  database: homefinancedb
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 768Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""             # required when ingress is enabled
+  # The frontend's Nginx forwards /api to the backend; the CSV upload limit is raised there too
+  proxyBodySize: 20m
+
+networkPolicy:
+  enabled: true
