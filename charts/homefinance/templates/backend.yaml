@@ -45,6 +45,37 @@ spec:
           labelSelector:
             matchLabels:
               {{- include "homefinance.selectorLabels" (dict "root" . "component" "backend") | nindent 14 }}
+      # Don't start the JVM until MySQL answers: Flyway runs at startup and the app exits if the
+      # database is unreachable, which would otherwise show up as CrashLoopBackOff on every deploy.
+      initContainers:
+        - name: wait-for-mysql
+          image: {{ include "homefinance.image" (dict "name" "mysql" "registry" "" "image" .Values.mysql.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - until mysqladmin ping -h mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do echo "waiting for mysql"; sleep 3; done
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: mysql-password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
       containers:
         - name: backend
           image: {{ include "homefinance.image" (dict "name" "backend" "registry" .Values.image.registry "image" .Values.backend.image) }}
