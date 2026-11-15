@@ -34,7 +34,7 @@ Lower `backend.resources.limits.memory` to `256Mi` in a scratch values file, dep
 Compare `kubectl get all -n homefinance-dev` and `-n homefinance-prod`: same chart, different replicas, PDB and hostnames from the values files only.
 
 ## 7. PodDisruptionBudget
-`kubectl drain homefinance-m02 --ignore-daemonsets --delete-emptydir-data` with the prod PDB in place: the drain evicts backend pods one at a time and never leaves fewer than one running.
+Evict both prod backend pods back to back (or drain a node that hosts one): the first eviction is allowed, the second is refused until the replacement is Ready, so at least one backend always serves traffic. Do **not** drain the node that hosts `mysql-0` on minikube; see the storage lesson below. Check placement first with `kubectl get pods -A -o wide`.
 
 ---
 
