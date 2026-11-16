@@ -1,0 +1,69 @@
+name: Promote to prod
+
+# Manual: opens a PR that sets the prod image tags to a tag already running in dev.
+# The PR is NOT auto-merged; after merging, sync homefinance-prod in Argo CD.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to promote (sha-xxxxxxx), already verified in dev"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+      # A PAT (not GITHUB_TOKEN) so the PR it opens triggers the required "helm" check
+      GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+    steps:
+      - name: Validate tag
+        run: |
+          if [[ ! "$TAG" =~ ^sha-[0-9a-f]{7}$ ]]; then
+            echo "::error::tag must look like sha-abc1234, got '$TAG'"
+            exit 1
+          fi
+
+      - name: Check both images exist in GHCR
+        run: |
+          for image in homefinance-backend homefinance-frontend; do
+            token=$(curl -fsS "https://ghcr.io/token?scope=repository:0x4147/${image}:pull" | jq -r .token)
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer $token" \
+              -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+              "https://ghcr.io/v2/0x4147/${image}/manifests/${TAG}")
+            if [ "$code" != "200" ]; then
+              echo "::error::${image}:${TAG} not found in GHCR (HTTP $code)"
+              exit 1
+            fi
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_PAT }}
+
+      - name: Set prod tags
+        run: |
+          yq -i '.backend.image.tag = strenv(TAG) | .frontend.image.tag = strenv(TAG)' envs/prod/values.yaml
+          git diff --stat
+
+      - name: Open PR
+        run: |
+          if git diff --quiet; then
+            echo "prod already runs $TAG, nothing to do"
+            exit 0
+          fi
+          branch="promote/prod-${TAG}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -am "Promote ${TAG} to prod"
+          git push --force-with-lease origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Promote ${TAG} to prod" \
+            --body "Sets the prod backend and frontend image tags to \`${TAG}\`, which has been running in dev.
+
+          After merging, sync \`homefinance-prod\` in Argo CD."
