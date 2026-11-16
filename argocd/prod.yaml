@@ -1,0 +1,24 @@
+# Argo CD Application for the prod-like environment. No automated sync: after a promotion PR is
+# merged the Application shows OutOfSync until a human clicks Sync (or runs `argocd app sync`).
+# No resources-finalizer on purpose: deleting this Application must never delete the workloads or data.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homefinance-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/0x4147/homefinance-gitops
+    targetRevision: main
+    path: charts/homefinance
+    helm:
+      releaseName: homefinance
+      valueFiles:
+        - ../../envs/prod/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homefinance-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
