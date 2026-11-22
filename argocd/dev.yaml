@@ -1,0 +1,27 @@
+# Argo CD Application for the dev environment: deploys whatever is on main, automatically.
+# No resources-finalizer on purpose: deleting this Application must never delete the workloads or data.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homefinance-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/0x4147/homefinance-gitops
+    targetRevision: main
+    path: charts/homefinance
+    helm:
+      # Same release name the Helm CLI used, so rendered resources (and immutable selectors) are identical
+      releaseName: homefinance
+      valueFiles:
+        - ../../envs/dev/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homefinance-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,42 @@
+# Values for the community argo-cd Helm chart (pinned in cluster/argocd-up.ps1) on the local minikube cluster.
+# Kept lean: no SSO, no notifications, no ApplicationSets, and the UI is reached through a port-forward.
+
+configs:
+  cm:
+    # Track resources with an annotation instead of the default label. The default writes
+    # app.kubernetes.io/instance, which this chart already uses as an (immutable) selector label.
+    application.resourceTrackingMethod: annotation
+  params:
+    # Plain HTTP between the port-forward and the server
+    server.insecure: true
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+# This chart version renders the ApplicationSet controller even if applicationSet.enabled is false,
+# so scale it to zero instead of running something we don't use.
+applicationSet:
+  replicas: 0
+
+controller:
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 512Mi}
+
+server:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 256Mi}
+
+repoServer:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 384Mi}
+
+redis:
+  resources:
+    requests: {cpu: 25m, memory: 64Mi}
+    limits: {memory: 128Mi}

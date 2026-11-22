@@ -38,3 +38,26 @@ minikube -p homefinance tunnel
 - **Images:** `ghcr.io/0x4147/homefinance-{backend,frontend}:<sha-tag>`, built and pushed by the app repo's `publish` workflow. Image tags are required values; there is no `latest`.
 - **Service names** `backend`, `frontend` and `mysql` are fixed: the frontend image proxies `/api` to the host `backend`.
 - **Network policies** are ingress-only for now and need a CNI that enforces them (Calico here).
+
+## GitOps with Argo CD
+
+Argo CD runs in the cluster (`argocd` namespace) and deploys whatever is on this repo's `main` branch. Nothing needs to reach the cluster from outside.
+
+```
+argocd/dev.yaml      Application for homefinance-dev: automated sync (prune + self-heal)
+argocd/prod.yaml     Application for homefinance-prod: manual sync (a human clicks Sync after a promotion)
+cluster/argocd-up.ps1, cluster/argocd-values.yaml   install (pinned chart version) and settings
+.github/workflows/promote.yml   manual "Promote to prod" workflow that opens a PR
+```
+
+```powershell
+.\cluster\argocd-up.ps1                                    # install Argo CD and register both Applications
+kubectl -n argocd port-forward svc/argocd-server 8080:80   # UI at http://localhost:8080 (user: admin)
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}'   # base64-decode
+```
+
+**Flow.** A merge to `develop` in the app repo publishes `sha-xxxxxxx` images and a bot opens a PR here that bumps `envs/dev/values.yaml`; when the `helm` check passes it auto-merges and Argo CD rolls dev. To release to prod, run the **Promote to prod** workflow with a tag that has been verified in dev, merge the PR it opens, then Sync `homefinance-prod`. Rolling back is `git revert` of the bump commit.
+
+**Needs the secret `GITOPS_PAT`** (fine-grained token for this repo: Contents and Pull requests read/write) so the PRs the workflows open can trigger the required `helm` check.
+
+**Heads up:** dev self-heals, so manual `kubectl scale/edit` experiments in `homefinance-dev` are reverted within about a minute. Pause with `kubectl -n argocd patch app homefinance-dev --type merge -p '{"spec":{"syncPolicy":{"automated":null}}}'` (and re-apply `argocd/dev.yaml` to resume).
